@@ -22,6 +22,16 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Prepare Android SDK
+        run: |
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+          yes | sdkmanager --licenses
+
       - name: Unzip Android project
         run: |
           mkdir -p source
@@ -34,16 +44,13 @@ jobs:
 
       - name: Build APK
         run: |
-          GRADLEW=$(find source -name gradlew -type f | head -n 1)
-          if [ -z "$GRADLEW" ]; then
-            echo "找不到 Gradle Wrapper"
-            find source -maxdepth 3 -type f | head -100
+          PROJECT_DIR=$(find source -name settings.gradle.kts -type f | head -n 1 | xargs dirname)
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "没有找到 Android 项目目录"
             exit 1
           fi
-          PROJECT_DIR=$(dirname "$GRADLEW")
           cd "$PROJECT_DIR"
-          chmod +x gradlew
-          ./gradlew assembleDebug
+          gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
